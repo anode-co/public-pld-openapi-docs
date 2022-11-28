@@ -1,0 +1,603 @@
+openapi: 3.0.3
+info:
+  title: Pkt Lightning Network Daemon (pld)
+  description: |-
+   this is the API functionality for the pld features to create and unlock a wallet, create addresses, send pkt between addresses, and to inspect addresses ad transactions
+   
+   Note that ALL REQUESTS require a `Content-Type: application/json` HTTP header to ffunction properly
+    
+    Some useful links:
+    - [Pkt software](https://github.com/pkt-cash/pktd)
+  termsOfService: http://swagger.io/terms/
+  contact:
+    email: cj@cjdns.fr
+  license:
+    name: ISC
+    url: https://github.com/pkt-cash/pktd/blob/develop/LICENSE
+  version: develop
+externalDocs:
+  description: Find out more about PKT
+  url: http://pkt.cash
+servers:
+  - url: https://localhost:8080
+tags:
+  - name: address
+    description: Address information
+  - name: wallet
+    description: Create and unlock wallet
+  - name: transactions
+    description: Send PKT and get transaction information
+paths:
+  /api/v1/util/seed/create:
+    post:
+      tags:
+        - wallet
+      summary: UpdateCreate a 15-word seed phrase
+      description: Create a 15-word seed phrase. Cannot be done after a wallet is created
+      operationId: genSeed
+      requestBody:
+        description: Create a new seed phrase
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Empty'
+        required: true
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SeedWords'
+  /api/v1/wallet/seed:
+    get:
+      tags:
+        - wallet
+      summary: Get a user's wallet seed. Wallet unlock required
+      description: Get a user's wallet seed. Wallet unlock required
+      operationId: getSeed
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SeedWords'
+  /api/v1/wallet/create:
+    post:
+      tags:
+        - wallet
+      summary: Create a wallet.
+      description: Create a wallet from an existing seed and password. Optional "seed passphrase" encrypts seed
+      operationId: createwallet
+      requestBody:
+        description: Create a wallet
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWallet'
+        required: true
+      responses:
+        '200':
+          description: successful operation
+  /api/v1/wallet/unlock:
+    post:
+      tags:
+        - wallet
+      summary: Unlock wallet
+      description: Unlock a wallet. Can only be done once. Throws an error on second unlock
+      operationId: unlockWallet
+      requestBody:
+        description: Unlock a wallet, optional seed passphrase encrypts 15-word seed phrase
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UnlockWallet'
+        required: true
+      responses:
+        '200':
+          description: successful operation
+        '500':
+          description: Wallet already unlocked
+  /api/v1/wallet/changepassphrase:
+    post:
+      tags:
+        - wallet
+      summary: Change wallet password.
+      description: Change wallet password. Note that passwords are base64-encoded. Wallet unlock required.
+      operationId: changePassphrase
+      requestBody:
+        description: Change wallet password. Note that passwords are base64-encoded.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePassword'
+        required: true
+      responses:
+        '200':
+          description: successful operation
+        '500':
+          description: invalid current password
+  /api/v1/wallet/address/create:
+    post:
+      tags:
+        - addresses
+      summary: Create new PKT address
+      description: Create a new PKT address from a wallet master private key. Wallet unlock required.
+      operationId: createAddress
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Address'
+  /api/v1/wallet/address/balances:
+    post:
+      tags:
+        - addresses
+      summary: List addresses
+      description: List addresses and balances in a wallet. Wallet unlock required.
+      operationId: listAddresses
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ListAddressRequest'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Addresses'
+  /api/v1/wallet/balance:
+    get:
+      tags:
+        - addresses
+      summary: Get total balance
+      description: Get total balance in wallet, denominated in satoshis. Wallet unlock required.
+      operationId: getTotalbalance
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TotalBalance'
+  /api/v1/wallet/transaction/sendfrom:
+    post:
+      tags:
+        - transactions
+      summary: Send PKT
+      description: Send PKT from one address to another. Amount denominated in PKT. Wallet unlock required.
+      operationId: sendFrom
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendRequest'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/text:
+              example: "093e8ac60e197e12a50c52489c1ec163e55cbbcd40d208f0d89077ba4bbc5c1b"
+  /api/v1/wallet/transaction/query:
+    post:
+      tags:
+        - transactions
+      summary: List transactions
+      description: List all transactions. Wallet unlock required
+      operationId: listTransactions
+      requestBody:
+        description: List all transactions
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ListTransactionRequest'
+      responses:
+        default:
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueryTransactionsResponse'
+  /pkt/v1/gettransaction/:
+    post:
+      tags:
+        - transactions
+      summary: Inspect a single transaction
+      description: Inspect a single transaction. Wallet unlock required.
+      operationId: getTransaction
+      requestBody:
+        description: List all transactions
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GetTransactionRequest'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueryTransactionResponse'
+  /api/v1/meta/getinfo:
+    get:
+      tags:
+        - wallet
+      summary: Get wallet and syncing inffo
+      description: Get wallet ind syncing info. Wallet unlock *not* required, but different information returned when wallet is unlocked
+      operationId: getInfo
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WalletInfoResponse'
+  
+components:
+  schemas:
+    Tag:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+      xml:
+        name: tag
+    Empty:
+      type: object
+    SeedWords:
+      required:
+        - seed
+      type: object
+      properties:
+        seed:
+          type: array
+          items:
+            type: string
+          example: ["island","play","toy","rose","approve","spatial","hurt","cricket","awkward","catch","shock","egg","first","extra","almost"]
+    CreateWallet:
+      required:
+        - walletPassphrase
+        - walletSeed
+      type: object
+      properties:
+        walletPassphrase:
+          type: string
+          example: "password123!"
+        seedPassphrase:
+          type: string
+          example: "optionalEncryptSeedPhrase123!"
+        walletSeed:
+          type: array
+          items:
+            type: string
+          example: ["island","play","toy","rose","approve","spatial","hurt","cricket","awkward","catch","shock","egg","first","extra","almost"]
+    UnlockWallet:
+      required:
+        - walletPassphrase
+      type: object
+      properties:
+        walletPassphrase:
+          type: string
+          example: "password123!"
+    ChangePassword:
+      required:
+        - currentPassphrase
+        - newPassphrase
+      type: object
+      properties:
+        currentPassphrase:
+          type: string
+          format: base64
+          example: "cGFzc3dvcmQxMjMh"
+        newPassphrase:
+          type: string
+          format: base64
+          example: "bmV3UGFzc3dvcmQxMjM="
+    Address:
+      required:
+        - address
+      type: object
+      properties:
+        address:
+          type: string
+          example: "pkt1q7j6ufe2dktp7gxgjycugvzlm44t6jcztlhqf8m"
+    ListAddressRequest:
+      required:
+        - showzerobalance
+      type: object
+      properties:
+        showzerobalance:
+          type: boolean
+          description: true if you want to list addresses with empty balances
+          example: true
+    Addresses:
+      required:
+        - addrs
+      type: object
+      properties:
+        addrs:
+          type: string
+    TotalBalance:
+      required:
+        - totalBalance
+      type: object
+      properties:
+        totalBalance:
+          type: number
+          format: int64
+          example: 123456
+    SendRequest:
+      required:
+        - amount
+        - toAddress
+        - fromAddress
+      type: object
+      properties:
+        amount:
+          type: number
+          format: float
+          example: 12.3456
+        toAddress:
+          type: string
+          example: "pkt1q7j6ufe2dktp7gxgjycugvzlm44t6jcztlhqf8m"
+        fromAddress:
+          type: string
+          example: "pkt1q7j6ufe2dktp7gxgjycugvzlm44t6jcztlhqf8m"
+    ListTransactionRequest:
+      required:
+        - coinbase
+        - startHeight
+        - endHeight
+      type: object
+      properties:
+        coinbase:
+          description: 1 to exclude mining transactions, 0 to show mining transactions
+          type: number
+          format: int32
+          example: 1
+        startHeight:
+          description: highest block to start reading
+          type: number
+          format: int32
+          example: 1204302345
+        endHeight:
+          description: lowest block to start reading from
+          type: number
+          format: int32
+          example: 1
+        txnsSkip:
+          description: paginate by skipping `txnsSkip` transactions
+          type: number
+          format: int32
+          example: 1000
+        txnsLimit:
+          description: show only `txnsLimit` transactions
+          type: number
+          format: int32
+          example: 50
+    SimpleTransaction:
+      required:
+        - abandoned
+        - account
+        - address
+        - amount
+        - blockhash
+        - blocktime
+        - category
+        - confirmations
+        - fee
+        - time
+        - timereceived
+        - trusted
+        - txid
+        - vout
+        - walletconflicts
+      type: object
+      properties:
+        abandoned:
+          type: boolean
+          example: false
+        account:
+          type: string
+          example: ''
+        address:
+          type: string
+          example: 'pkt1qwpw7pd44r6ghl9whr0sgsnz8t66zm27ejqm5ka'
+        amount:
+          type: number
+          format: int64
+          example: -29700
+        blockhash:
+          type: string
+          example: 'c3877f15eeeaf3aa6371d15e47890e89e36fbf49425b555d7a0bd0a6019d6472'
+        blocktime:
+          type: number
+          format: timestamp
+          example: 1629036261,
+        category:
+          type: string
+          example: 'send'
+        confirmations:
+          type: number
+          example: 2926
+        fee:
+          type: number
+          format: float
+          example: -1.3131648302078247e-07
+        time:
+          type: number
+          format: timestamp
+          example: 1629036261
+        timereceived: 
+          type: number
+          format: timestamp
+          example: 1629036261
+        trusted:
+          type: boolean
+          example: false
+        txid:
+          type: string
+          example: '093e8ac60e197e12a50c52489c1ec163e55cbbcd40d208f0d89077ba4bbc5c1b'
+        vout:
+          type: number
+          example: 0
+        walletconflicts: 
+          type: array
+          items:
+            type: string
+          example: []
+    QueryTransactionsResponse:
+      required:
+        - transactions
+      type: object
+      properties:
+        transactions:
+          type: array
+          items:
+            $ref: '#/components/schemas/SimpleTransaction'
+    DetailedTransaction:
+      required:
+        - amount
+        - fee
+        - confirmations
+        - blockhash
+        - blockindex
+        - blocktime
+        - txid
+        - walletconflicts
+        - time
+        - timereceived
+        - details
+        - hex
+      type: object
+      properties:
+        amount:
+          type: number
+          format: float
+          example: 599.9999998686835
+        fee:
+          type: number
+          format: int64
+          example: 1.3131648302078247e-7
+        confirmations:
+          type: number
+          format: int32
+          example: 2936
+        blockhash:
+          type: string
+          example: "c3877f15eeeaf3aa6371d15e47890e89e36fbf49425b555d7a0bd0a6019d6472"
+        blockindex:
+          type: number
+          format: int32
+          example: 0
+        blocktime:
+          type: number
+          format: timestamp
+          example: 1629036261
+        txid:
+          type: string
+          example: "093e8ac60e197e12a50c52489c1ec163e55cbbcd40d208f0d89077ba4bbc5c1b"
+        walletconflicts: 
+          type: array
+          items:
+            type: string
+          example: []
+        time:
+          type: number
+          format: timestamp
+          example: 1629036261
+        timereceived:
+          type: number
+          format: timestamp
+          example: 1629036261
+        details:
+          type: array
+          items:
+            type: object
+            properties:
+              account:
+                type: string
+                example: "default"
+              amount:
+                type: number
+                format: float
+                example: 599.9999998686835
+              category:
+                type: string
+                example: "send"
+              vout:
+                type: number
+                format: int32
+                example: 0
+        hex:
+          type: string
+          example: "0100000001b82dce307016b6bbdbcd0854afc347c4fda74d3c37d9d584128a69c272d355c00000000000ffffffff0200000000011d0000160014705de0b6b51e917f95d71be0884c475eb42dabd973ffffff950000001600140bce1c1dbbb738780b4b37dfd16d58c85d2e979a00000000"
+    GetTransactionRequest:
+      required:
+        - txid
+      type: object
+      properties:
+        txid:
+          type: string
+          example: "093e8ac60e197e12a50c52489c1ec163e55cbbcd40d208f0d89077ba4bbc5c1b"
+    QueryTransactionResponse:
+      required:
+        - transactions
+      type: object
+      properties:
+        transaction:
+          $ref: '#/components/schemas/DetailedTransaction'
+    WalletInfoResponse:
+      required:
+        - neutrino
+        - height
+        - version
+      type: object
+      properties:
+        version:
+          type: string
+          example: "0.0.0-unknown"
+        height:
+          type: number
+          format: int32
+          example: 10223000232
+        neutrino:
+          type: object
+          properties:
+            isSyncing:
+              type: boolean
+              example: false
+            height:
+              type: number
+              format: int32
+              example: 10223000232
+            peers:
+              type: array
+              items:
+                type: object
+                properties:
+                  lastBlock:
+                    type: number
+                    format: int32
+                    example: 10223000232
+        wallet: 
+          type: object
+          properties:
+            currentHeight:
+              type: number
+              format: int32
+              example: 10223000232
+            walletStats:
+              type: object
+              properties:
+                syncing:
+                  type: boolean
+                  example: false
